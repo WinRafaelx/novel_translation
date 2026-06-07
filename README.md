@@ -78,6 +78,8 @@ ebooks/
 images/
 ```
 
+Small preview EPUBs are available under [samples/](samples/). They are trimmed excerpts for portfolio review, not full generated books.
+
 ## Setup
 
 Create and activate a virtual environment:
@@ -279,6 +281,18 @@ Preview planned groups without writing EPUBs:
 ```
 
 The EPUB builder uses an existing Thai heading when present. If a file starts directly with story text, it generates a clean chapter title from the filename so the EPUB table of contents remains readable.
+
+## Sample Output
+
+The [samples/](samples/) folder contains compact EPUB previews that demonstrate the final output format without including complete books:
+
+```text
+samples/Novel_Translation_Pipeline_Sample.epub
+samples/Return_of_the_Mount_Hua_Sect_301-310_preview.epub
+samples/Return_of_the_Mount_Hua_Sect_724-819_preview.epub
+```
+
+Each preview keeps the cover plus a short excerpt, roughly around ten reader pages depending on the EPUB reader, device, font size, and layout settings.
 
 ## Optional Cover Workflow
 
