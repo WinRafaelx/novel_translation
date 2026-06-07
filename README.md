@@ -284,15 +284,16 @@ The EPUB builder uses an existing Thai heading when present. If a file starts di
 
 ## Sample Output
 
-The [samples/](samples/) folder contains compact EPUB previews that demonstrate the final output format without including complete books:
+The [samples/](samples/) folder contains compact previews that demonstrate the final output format without including complete books. PDF versions are included so GitHub can render the samples directly in the browser:
 
 ```text
-samples/Novel_Translation_Pipeline_Sample.epub
 samples/Return_of_the_Mount_Hua_Sect_301-310_preview.epub
+samples/Return_of_the_Mount_Hua_Sect_301-310_preview.pdf
 samples/Return_of_the_Mount_Hua_Sect_724-819_preview.epub
+samples/Return_of_the_Mount_Hua_Sect_724-819_preview.pdf
 ```
 
-Each preview keeps the cover plus a short excerpt, roughly around ten reader pages depending on the EPUB reader, device, font size, and layout settings.
+Each preview keeps the cover plus a short excerpt. The PDFs are around eight pages; EPUB page count varies by reader, device, font size, and layout settings.
 
 ## Optional Cover Workflow
 
