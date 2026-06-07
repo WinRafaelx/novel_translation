@@ -315,23 +315,6 @@ The current recommended workflow starts from manual source files in `novel_chapt
 
 These scripts are not required for the no-scrape pipeline.
 
-## Portfolio Highlights
-
-This project demonstrates:
-
-- End-to-end workflow orchestration across browser automation, LLM-assisted editing, verification gates, and EPUB packaging.
-- Practical resume/retry design through independently runnable stages.
-- Separation of raw model output from final edited artifacts.
-- Domain-specific QA for Thai wuxia/web-novel translation.
-- File-based verification gates before publishing.
-- EPUB generation with metadata, navigation, spine, and chapter grouping.
-
-Resume summary:
-
-```text
-Built a Python automation pipeline that transforms manually collected English web-novel chapters into polished Thai EPUBs using supervised Gemini translation, Codex-assisted QA/editing, automated verification gates, and EbookLib packaging.
-```
-
 ## Responsible Use
 
 Use this toolkit only with content you have the right to process. Respect source-site terms, copyright, paywalls, and access controls. The browser automation here is designed for supervised personal workflows, not for bypassing authentication, rate limits, or restrictions.
