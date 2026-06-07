@@ -76,10 +76,17 @@ def group_by_title(chapters):
 
 
 def group_by_size(chapters, group_size):
-    return [
+    groups = [
         chapters[index:index + group_size]
         for index in range(0, len(chapters), group_size)
     ]
+    for group in groups:
+        start = group[0].number
+        end = group[-1].number
+        for chapter in group:
+            chapter.group_key = f"{start}-{end}"
+            chapter.group_title = f"Chapters {start}-{end}"
+    return groups
 
 
 def group_by_range(chapters, range_size):
@@ -123,16 +130,44 @@ def paragraph_html(text):
     return "\n".join(blocks)
 
 
-def chapter_title_and_body(text, fallback_title):
+def fallback_chapter_title(chapter):
+    match = re.match(r"^(.+)\s+(\d+)$", chapter.raw_title)
+    if match:
+        title, part = match.groups()
+        return f"ตอนที่ {chapter.number} - {title} ({part})"
+    return f"ตอนที่ {chapter.number} - {chapter.raw_title or f'Chapter {chapter.number}'}"
+
+
+def looks_like_heading(line, chapter_number):
+    stripped = line.strip()
+    if not stripped:
+        return False
+    if stripped.startswith(f"ตอนที่ {chapter_number}"):
+        return True
+    if re.match(rf"^{chapter_number}\s+[—-]\s+.+", stripped):
+        return True
+    if re.match(rf"^Chapter\s+{chapter_number}\b", stripped, re.IGNORECASE):
+        return True
+    return False
+
+
+def chapter_title_and_body(text, chapter):
     lines = text.splitlines()
-    title = lines[0].strip() if lines else fallback_title
-    body = "\n".join(lines[1:]).strip() if lines else ""
+    fallback_title = fallback_chapter_title(chapter)
+
+    if lines and looks_like_heading(lines[0], chapter.number):
+        title = lines[0].strip()
+        body = "\n".join(lines[1:]).strip()
+    else:
+        title = fallback_title
+        body = text.strip()
+
     return title or fallback_title, body
 
 
 def make_chapter_document(chapter, index):
     text = chapter.path.read_text(encoding="utf-8").strip()
-    title, body = chapter_title_and_body(text, chapter.raw_title or f"Chapter {chapter.number}")
+    title, body = chapter_title_and_body(text, chapter)
 
     document = epub.EpubHtml(
         title=title,

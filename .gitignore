@@ -1,7 +1,11 @@
 mount_hua_chapters/
 mount_hua_gemini_translated/
+novel_gemini_translated/
+novel_final/
+pipeline_reports/
 temp/
 __pycache__/
+novel_chapters/
 .chatgpt_browser_profile/
 .gemini_browser_profile/
 .venv/
@@ -11,7 +15,9 @@ images/
 translation_qa_reports/
 .DS_Store
 *.mp3
-*.txt
+# *.txt
+mount_hua_chapters.txt
+mount_hua_links_clean.txt
 *.csv
 *.tsv
 .env

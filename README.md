@@ -1,366 +1,337 @@
-# Mount Hua Scraping, Translation, and EPUB Tools
+# Novel Translation Pipeline
 
-This folder contains scripts for:
+![alt text](image.png)
 
-1. Scraping SkyDemonOrder chapter links.
-2. Downloading chapter text into `.txt` files.
-3. Sending chapters to a Gemini Gem for translation through a supervised browser.
-4. Building EPUB ebooks from translated `.txt` files.
+An automation toolkit for turning manually collected English web-novel chapters into polished Thai EPUB files.
 
-Run commands from this project folder:
+The main workflow starts from local `.txt` chapter files, sends them through a supervised Gemini translation step, prepares a final working folder, runs Codex-assisted Thai novel QA/polishing, verifies the output, and builds EPUB books.
 
-```bash
-cd /Users/cielsensei/Raf_dev/tts_loo
+## What It Does
+
+- Processes chapter ranges from local text files.
+- Automates a custom Gemini Gem translation workflow through a visible Playwright browser.
+- Preserves raw Gemini output separately from final edited files.
+- Uses Codex with a Thai novel QA/polishing skill for line editing, title cleanup, pronoun/register checks, and prose polish.
+- Adds missing chapter headings from filenames when Gemini omits them.
+- Detects leftover English/source-language text, untranslated headings, suspicious pronouns, and missing chapters before EPUB creation.
+- Builds EPUB files with clean table-of-contents entries.
+- Optionally generates and applies cover images.
+
+## Current Pipeline
+
+```text
+novel_chapters/
+  English input files from manual scraping
+        |
+        v
+novel_gemini_translated/
+  Raw Gemini Thai output
+        |
+        v
+novel_final/
+  Codex-polished Thai files with normalized headings
+        |
+        v
+pipeline_reports/
+  Verification reports
+        |
+        v
+ebooks/
+  Final EPUB output
+```
+
+Scraping is intentionally outside the main pipeline. Put manually collected English chapters into `novel_chapters/`, then run the pipeline.
+
+## Tech Stack
+
+- Python 3.12+
+- Playwright
+- Gemini web UI automation
+- Codex CLI
+- Custom Codex Thai novel QA skill
+- EbookLib
+- BeautifulSoup / Requests / cloudscraper for legacy scraping utilities
+
+## Repository Layout
+
+```text
+CODEX_QA_SKILL.md          Shareable description of the Codex QA skill
+novel_pipeline.py           Main no-scrape end-to-end pipeline
+automate_gemini_gem.py      Supervised Gemini Gem browser automation
+make_epub_batches.py        EPUB builder
+automate_chatgpt_covers.py  Optional cover generation automation
+apply_epub_covers.py        Optional EPUB cover injector
+translation_qa_workflow.py  Older deterministic QA helper
+tess.py                     Legacy SkyDemonOrder link collector
+scape_dynamic.py            Legacy chapter scraper
+requirements.txt            Python dependencies
+```
+
+Generated folders are ignored by Git:
+
+```text
+novel_chapters/
+novel_gemini_translated/
+novel_final/
+pipeline_reports/
+ebooks/
+images/
 ```
 
 ## Setup
 
-Use the project virtual environment if needed:
+Create and activate a virtual environment:
 
 ```bash
+python3 -m venv .venv
 source .venv/bin/activate
 ```
 
 Install dependencies:
 
 ```bash
-python -m pip install cloudscraper requests beautifulsoup4 playwright ebooklib
+python -m pip install -r requirements.txt
 python -m playwright install chromium
 ```
 
-## 1. Scrape Chapter Links
+Log in once to the tools used by the supervised browser steps:
 
-Script: `tess.py`
+- Gemini, for translation.
+- ChatGPT, only if using cover generation.
+- Codex CLI, for the Thai polishing step.
 
-Default command:
+Check Codex is available:
 
 ```bash
-python tess.py
+codex --help
 ```
 
-Output:
+## Input File Format
+
+Place English source chapters in:
 
 ```text
-mount_hua_links_clean.txt
+novel_chapters/
 ```
 
-This writes free chapter links only. To include paid/locked chapter links too:
-
-```bash
-python tess.py --include-paid --output mount_hua_all_links.txt
-```
-
-Use a different project URL:
-
-```bash
-python tess.py --url "https://skydemonorder.com/projects/3801994495-return-of-the-mount-hua-sect" --output mount_hua_links_clean.txt
-```
-
-## 2. Scrape Chapter Text
-
-Script: `scape_dynamic.py`
-
-Scrape a chapter range from `mount_hua_links_clean.txt`:
-
-```bash
-python scape_dynamic.py --start 256 --end 330 --output-dir mount_hua_chapters_256_330
-```
-
-Inputs:
+Expected filename format:
 
 ```text
-mount_hua_links_clean.txt
+0820__820_My_Kids_Are_A_Little_Rough_5.txt
+0821__821_I_Won_This_War_1.txt
 ```
 
-Output folder:
+The pipeline uses the leading chapter number for range selection. The filename title is also used to generate a heading when Gemini omits one.
+
+Example generated heading:
 
 ```text
-mount_hua_chapters_256_330/
+ตอนที่ 820 - My Kids Are A Little Rough (5)
 ```
 
-Scrape one chapter URL:
+During the Codex polishing step, English title text in generated headings is translated into Thai while preserving the chapter number and part marker.
+
+See [CODEX_QA_SKILL.md](CODEX_QA_SKILL.md) for the shareable QA skill workflow and editing rules used by the Codex polishing step.
+
+## Custom Gemini Gem
+
+The Gemini translation step uses a custom Gem instead of a generic prompt. The Gem is seeded with project-specific reference material:
+
+- Character name mappings and preferred Thai spellings.
+- Sect, place, technique, and world-building terminology.
+- World setup and relationship context.
+- Short sample Thai translations that demonstrate the target prose style.
+- Instructions to translate in a wuxia / martial-arts novel voice with clear emotion, hierarchy, tension, comedy, and action rhythm.
+
+The Gem produces the first Thai draft. Codex then performs the stricter QA pass for headings, pronouns, register, prose compacting, and final EPUB readiness.
+
+## End-To-End Usage
+
+Run everything for a chapter range:
 
 ```bash
-python scape_dynamic.py --single "https://skydemonorder.com/projects/3801994495-return-of-the-mount-hua-sect/256-what-opened-1"
+.venv/bin/python novel_pipeline.py \
+  --start 820 \
+  --end 825 \
+  --all
 ```
 
-Use a different links file:
+This runs:
+
+1. Validate English source files in `novel_chapters/`.
+2. Translate with Gemini into `novel_gemini_translated/`.
+3. Copy translated files into `novel_final/`.
+4. Add missing chapter headings.
+5. Run Codex Thai novel polishing.
+6. Verify final files.
+7. Build EPUB into `ebooks/`.
+
+The Gemini step is supervised. A browser opens, you log in if needed, confirm the Gem chat is ready, then press Enter in the terminal.
+
+## Resume Commands
+
+If translation already finished and you only need final polish plus EPUB:
 
 ```bash
-python scape_dynamic.py --start 256 --end 330 --links mount_hua_all_links.txt --output-dir mount_hua_chapters_256_330
+.venv/bin/python novel_pipeline.py \
+  --start 820 \
+  --end 825 \
+  --prepare-final \
+  --polish-with-codex \
+  --verify \
+  --make-epub
 ```
 
-## 3. Translate With Gemini Gem
-
-Script: `automate_gemini_gem.py`
-
-This uses a visible Playwright browser. It does not bypass login or security checks. You log in manually, then the script submits chapters one by one.
-
-Test one chapter first:
+If final files already exist and you only need verification plus EPUB:
 
 ```bash
-python automate_gemini_gem.py --start 256 --end 256 --force
+.venv/bin/python novel_pipeline.py \
+  --start 820 \
+  --end 825 \
+  --verify \
+  --make-epub
 ```
 
-When the browser opens:
-
-1. Log in to Gemini if needed.
-2. Confirm the Gem chat is ready.
-3. Return to the terminal.
-4. Press Enter to start.
-
-Translate a full range:
+If verification finds error-level issues but you intentionally want to build anyway:
 
 ```bash
-python automate_gemini_gem.py --start 256 --end 330
+.venv/bin/python novel_pipeline.py \
+  --start 820 \
+  --end 825 \
+  --verify \
+  --make-epub \
+  --allow-verify-errors
 ```
 
-Default input folder:
+## Useful Pipeline Flags
+
+```bash
+--force-translate
+```
+
+Retranslate chapters even if Gemini output files already exist.
+
+```bash
+--force-final
+```
+
+Overwrite files in `novel_final/` from `novel_gemini_translated/`.
+
+```bash
+--group-by size --group-size 6
+```
+
+Control EPUB grouping manually. By default, `novel_pipeline.py` builds one EPUB for exactly the selected chapter range. For example, `--start 820 --end 825` creates one 6-chapter EPUB.
+
+```bash
+--group-by range --group-size 10
+```
+
+Build only complete 10-chapter range groups. Incomplete ranges are skipped.
+
+## Verification
+
+Before EPUB creation, the pipeline checks `novel_final/` for:
+
+- Missing chapter files.
+- Empty files.
+- Missing or malformed chapter headings.
+- English text left in the body.
+- Chinese, Japanese, or Korean-script leftovers.
+- Known artifact terms from machine translation.
+- English title text left inside generated headings.
+- Suspicious modern Thai pronouns such as `คุณ`, `พวกคุณ`, `นาย`, `พวกนาย`, `เธอ`, `หล่อน`.
+
+Verification writes a Markdown report:
 
 ```text
-mount_hua_chapters_256_330/
+pipeline_reports/0820_0825_verification.md
 ```
 
-Default output folder:
+Warnings do not block EPUB creation by default. Error-level findings block EPUB creation unless `--allow-verify-errors` is passed.
 
-```text
-mount_hua_gemini_translated_256_330/
-```
+## EPUB Builder
 
-Use a custom input/output folder:
+Build directly from a final folder:
 
 ```bash
-python automate_gemini_gem.py \
-  --input-dir mount_hua_chapters_256_330 \
-  --output-dir mount_hua_gemini_translated_256_330 \
-  --start 256 \
-  --end 330
-```
-
-Useful flags:
-
-```bash
---force
-```
-
-Overwrite translated files that already exist.
-
-```bash
---delay 10
-```
-
-Wait 10 seconds between chapters.
-
-```bash
---timeout 900
-```
-
-Wait up to 900 seconds for each Gemini response.
-
-```bash
---use-copy-button
-```
-
-Use Gemini's Copy button instead of extracting response text from the page. Usually leave this off.
-
-Important: once the script starts submitting chapters, avoid touching or scrolling the Gemini browser window.
-
-## 4. Make EPUB Books
-
-Script: `make_epub_batches.py`
-
-Preview planned EPUB groups:
-
-```bash
-python make_epub_batches.py --preview
-```
-
-Create EPUBs grouped by complete 10-episode ranges:
-
-```bash
-python make_epub_batches.py
-```
-
-Default input folder:
-
-```text
-mount_hua_gemini_translated_256_330/
-```
-
-Default output folder:
-
-```text
-ebooks/
-```
-
-Group by same title pattern:
-
-```bash
-python make_epub_batches.py --group-by title
-```
-
-Example: these files become one EPUB:
-
-```text
-0256__256_What_Opened_1.txt
-0257__257_What_Opened_2.txt
-0258__258_What_Opened_3.txt
-0259__259_What_Opened_4.txt
-0260__260_What_Opened_5.txt
-```
-
-Group by complete episode ranges, such as `301-310`.
-Incomplete ranges are skipped:
-
-```bash
-python make_epub_batches.py --group-by range --group-size 10
-```
-
-Group by fixed size, such as 10 chapters per EPUB, without requiring complete
-episode ranges:
-
-```bash
-python make_epub_batches.py --group-by size --group-size 10
-```
-
-Create EPUBs for a specific range:
-
-```bash
-python make_epub_batches.py --start 256 --end 330
-```
-
-Use custom folders:
-
-```bash
-python make_epub_batches.py \
-  --input-dir mount_hua_gemini_translated_256_330 \
+.venv/bin/python make_epub_batches.py \
+  --input-dir novel_final \
   --output-dir ebooks \
-  --start 256 \
-  --end 330
-```
-
-Set ebook metadata:
-
-```bash
-python make_epub_batches.py \
   --book-prefix "Return of the Mount Hua Sect" \
-  --author "Gemini translation"
+  --author "Rafaelx" \
+  --start 820 \
+  --end 825 \
+  --group-by size \
+  --group-size 6
 ```
 
-## 5. Generate Missing Covers With ChatGPT Project
-
-Script: `automate_chatgpt_covers.py`
-
-This uses a visible Playwright browser. It does not bypass login or security
-checks. You log in manually, then the script checks `ebooks/`, skips EPUBs that
-already have matching range-named cover images in `images/`, and loops until all
-missing covers are saved.
-
-Check which covers are missing:
+Preview planned groups without writing EPUBs:
 
 ```bash
-python automate_chatgpt_covers.py --list-missing
+.venv/bin/python make_epub_batches.py \
+  --input-dir novel_final \
+  --start 820 \
+  --end 825 \
+  --group-by size \
+  --group-size 6 \
+  --preview
 ```
 
-Generate all missing covers:
+The EPUB builder uses an existing Thai heading when present. If a file starts directly with story text, it generates a clean chapter title from the filename so the EPUB table of contents remains readable.
+
+## Optional Cover Workflow
+
+Generate missing cover images through a supervised ChatGPT browser session:
 
 ```bash
-python automate_chatgpt_covers.py --continue-on-error
+.venv/bin/python automate_chatgpt_covers.py --list-missing
+.venv/bin/python automate_chatgpt_covers.py --continue-on-error
 ```
 
-When the browser opens:
+Apply covers to EPUB files:
 
-1. Log in to ChatGPT if needed.
-2. Confirm the Mount Hua Illustrator Project chat is ready.
-3. Return to the terminal.
-4. Press Enter to start.
+```bash
+.venv/bin/python apply_epub_covers.py --dry-run
+.venv/bin/python apply_epub_covers.py
+```
 
-Default input/output folders:
+Default folders:
 
 ```text
 ebooks/
 images/
+ebooks-with-cover/
 ```
 
-Generated cover files are named by chapter range so `apply_epub_covers.py` can
-pick them up automatically:
+## Legacy Scraping Utilities
 
-```text
-images/301-310.png
-images/311-320.png
-images/321-330.png
-```
-
-Useful flags:
+The current recommended workflow starts from manual source files in `novel_chapters/`. Older SkyDemonOrder scraping utilities remain in the repository for reference:
 
 ```bash
---start 301 --end 330
+.venv/bin/python tess.py
+.venv/bin/python scape_dynamic.py --start 256 --end 330 --output-dir mount_hua_chapters_256_330
 ```
 
-Only process EPUBs whose chapter ranges overlap this range.
+These scripts are not required for the no-scrape pipeline.
 
-```bash
---force
-```
+## Portfolio Highlights
 
-Regenerate covers even when matching images already exist.
+This project demonstrates:
 
-```bash
---max-passes 3
-```
+- End-to-end workflow orchestration across browser automation, LLM-assisted editing, verification gates, and EPUB packaging.
+- Practical resume/retry design through independently runnable stages.
+- Separation of raw model output from final edited artifacts.
+- Domain-specific QA for Thai wuxia/web-novel translation.
+- File-based verification gates before publishing.
+- EPUB generation with metadata, navigation, spine, and chapter grouping.
 
-Stop after three full passes over missing covers. By default, the script keeps
-looping until every EPUB has a matching cover.
-
-After cover generation, apply covers to EPUBs:
-
-```bash
-python apply_epub_covers.py --dry-run
-python apply_epub_covers.py
-```
-
-## Common Workflow
-
-Run the full pipeline in this order:
-
-```bash
-python tess.py
-python scape_dynamic.py --start 256 --end 330 --output-dir mount_hua_chapters_256_330
-python automate_gemini_gem.py --start 256 --end 330
-python make_epub_batches.py --preview
-python make_epub_batches.py
-python automate_chatgpt_covers.py --continue-on-error
-python apply_epub_covers.py
-```
-
-## Output Summary
-
-Chapter links:
+Resume summary:
 
 ```text
-mount_hua_links_clean.txt
+Built a Python automation pipeline that transforms manually collected English web-novel chapters into polished Thai EPUBs using supervised Gemini translation, Codex-assisted QA/editing, automated verification gates, and EbookLib packaging.
 ```
 
-Raw scraped chapters:
+## Responsible Use
 
-```text
-mount_hua_chapters_256_330/
-```
-
-Translated chapters:
-
-```text
-mount_hua_gemini_translated_256_330/
-```
-
-EPUB books:
-
-```text
-ebooks/
-```
-
-Cover images:
-
-```text
-images/
-```
+Use this toolkit only with content you have the right to process. Respect source-site terms, copyright, paywalls, and access controls. The browser automation here is designed for supervised personal workflows, not for bypassing authentication, rate limits, or restrictions.
