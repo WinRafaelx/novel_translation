@@ -1,0 +1,17 @@
+mount_hua_chapters/
+mount_hua_gemini_translated/
+temp/
+__pycache__/
+.chatgpt_browser_profile/
+.gemini_browser_profile/
+.venv/
+ebooks/
+ebooks-with-cover/
+images/
+translation_qa_reports/
+.DS_Store
+*.mp3
+*.txt
+*.csv
+*.tsv
+.env
